@@ -4,8 +4,8 @@ services:
   # 1. Python Face Recognition Microservice
   face_service:
     build:
-      context: ./face_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: face_service/Dockerfile
     container_name: smart_attendance_face_service
     ports:
       - "8000:8000"
