@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # 1. Python Face Recognition Microservice
+  face_service:
+    build:
+      context: ./face_service
+      dockerfile: Dockerfile
+    container_name: smart_attendance_face_service
+    ports:
+      - "8000:8000"
+    restart: always
+
+  # 2. Node.js Express Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smart_attendance_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb+srv://Mahesh:Babu%401234@cluster0.1po6zfg.mongodb.net/smart_attendance?retryWrites=true&w=majority&appName=Cluster0
+      - JWT_SECRET=supersecretjwtkey_987654321
+      - FACE_SERVICE_URL=http://face_service:8000
+    depends_on:
+      - face_service
+    restart: always
+
+  # 3. React Frontend Web App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: smart_attendance_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: always
