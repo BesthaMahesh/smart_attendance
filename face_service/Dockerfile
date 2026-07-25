@@ -2,17 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies needed for OpenCV and C++ runtime without compiling dlib from source
+# Install system dependencies needed for OpenCV and C++ runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    cmake \
     libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY face_service/requirements.txt .
 
-RUN pip install --no-cache-dir --find-links https://github.com/z-a-f/dlib-wheels/releases/download/v19.24.2/ -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY face_service/ .
 

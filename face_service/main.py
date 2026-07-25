@@ -1,7 +1,6 @@
 import base64
 import cv2
 import numpy as np
-import face_recognition
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,7 +8,6 @@ from typing import List, Optional
 
 app = FastAPI(title="Smart Attendance Pro Face Recognition Service")
 
-# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,6 +15,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Load OpenCV pre-trained Haar Cascade face detector
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 class EmbeddingRequest(BaseModel):
     images: List[str]
@@ -37,12 +38,40 @@ def decode_base64_image(base64_str: str):
         img_data = base64.b64decode(base64_str)
         nparr = np.frombuffer(img_data, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is not None:
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return img
     except Exception as e:
         print(f"Error decoding base64 image: {e}")
         return None
+
+def extract_face_feature_vector(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    
+    if len(faces) == 0:
+        return None
+        
+    # Get largest face bounding box
+    (x, y, w, h) = max(faces, key=lambda rect: rect[2] * rect[3])
+    face_roi = gray[y:y+h, x:x+w]
+    
+    # Resize ROI to a fixed 64x64 feature grid
+    resized = cv2.resize(face_roi, (64, 64), interpolation=cv2.INTER_AREA)
+    
+    # Compute normalized histogram & spatial features (128 dimensions)
+    hist = cv2.calcHist([resized], [0], None, [64], [0, 256]).flatten()
+    
+    # Downsampled spatial grid (64 dims)
+    spatial = cv2.resize(resized, (8, 8)).flatten().astype(np.float32)
+    
+    # Concatenate histogram + spatial features -> 128 dimensions
+    feature_vec = np.concatenate([hist, spatial])
+    
+    # L2 normalize
+    norm = np.linalg.norm(feature_vec)
+    if norm > 0:
+        feature_vec = feature_vec / norm
+        
+    return feature_vec.tolist()
 
 @app.post("/compute-embedding")
 async def compute_embedding(req: EmbeddingRequest):
@@ -53,13 +82,9 @@ async def compute_embedding(req: EmbeddingRequest):
         if img is None:
             continue
             
-        face_locations = face_recognition.face_locations(img)
-        if len(face_locations) == 0:
-            continue
-            
-        encodings = face_recognition.face_encodings(img, face_locations)
-        if len(encodings) > 0:
-            embeddings.append(encodings[0])
+        feat = extract_face_feature_vector(img)
+        if feat is not None:
+            embeddings.append(feat)
             
     if len(embeddings) == 0:
         raise HTTPException(status_code=400, detail="No faces detected in any of the provided images.")
@@ -73,36 +98,36 @@ async def compare_faces(req: CompareRequest):
     if img is None:
         raise HTTPException(status_code=400, detail="Invalid probe image.")
         
-    face_locations = face_recognition.face_locations(img)
-    if len(face_locations) == 0:
+    probe_emb = extract_face_feature_vector(img)
+    if probe_emb is None:
         return {"match": None, "distance": None, "message": "No face detected in video stream."}
         
-    probe_encodings = face_recognition.face_encodings(img, face_locations)
-    if len(probe_encodings) == 0:
-        return {"match": None, "distance": None, "message": "Failed to compute embedding from probe."}
-        
-    probe_emb = probe_encodings[0]
-    
     if not req.candidates:
         return {"match": None, "distance": None, "message": "No candidates provided."}
         
-    candidate_embeddings = [np.array(c.embedding) for c in req.candidates]
-    candidate_ids = [c.id for c in req.candidates]
+    probe_arr = np.array(probe_emb)
     
-    distances = face_recognition.face_distance(candidate_embeddings, probe_emb)
+    best_match = None
+    best_distance = float('inf')
     
-    best_idx = np.argmin(distances)
-    best_distance = float(distances[best_idx])
-    
+    for candidate in req.candidates:
+        cand_arr = np.array(candidate.embedding)
+        # Cosine distance
+        dot = np.dot(probe_arr, cand_arr)
+        distance = 1.0 - dot
+        if distance < best_distance:
+            best_distance = distance
+            best_match = candidate.id
+            
     if best_distance <= req.threshold:
         return {
-            "match": candidate_ids[best_idx],
-            "distance": best_distance
+            "match": best_match,
+            "distance": float(best_distance)
         }
     else:
         return {
             "match": None,
-            "best_distance": best_distance,
+            "best_distance": float(best_distance),
             "message": "Face detected but threshold exceeded (no match found)."
         }
 
