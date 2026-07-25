@@ -17,7 +17,18 @@ app.add_middleware(
 )
 
 # Load OpenCV pre-trained Haar Cascade face detector
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+try:
+    if not hasattr(cv2, 'data') or not hasattr(cv2, 'CascadeClassifier'):
+        import sys
+        print("DEBUG DIAGNOSTICS FOR CV2:", flush=True)
+        print(f"DEBUG: cv2 path = {getattr(cv2, '__file__', 'None')}", flush=True)
+        print(f"DEBUG: cv2 dir contents = {dir(cv2)}", flush=True)
+        print(f"DEBUG: sys.path = {sys.path}", flush=True)
+    
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+except Exception as e:
+    print(f"CRITICAL ERROR loading Haar Cascade: {e}", flush=True)
+    raise e
 
 class EmbeddingRequest(BaseModel):
     images: List[str]
