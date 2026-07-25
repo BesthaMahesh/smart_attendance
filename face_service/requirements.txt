@@ -1,7 +1,9 @@
 fastapi
 uvicorn
 numpy
-dlib-bin
-face-recognition
-opencv-python-headless
 python-multipart
+opencv-python-headless
+face-recognition-models
+--find-links https://github.com/z-a-f/dlib-wheels/releases/download/v19.24.2/
+dlib
+face-recognition
