@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY face_service/requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --find-links https://github.com/z-a-f/dlib-wheels/releases/download/v19.24.2/ -r requirements.txt
 
 COPY face_service/ .
 

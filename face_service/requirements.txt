@@ -3,6 +3,6 @@ uvicorn
 numpy
 python-multipart
 opencv-python-headless
-dlib-bin
+dlib
 face-recognition-models
 face-recognition
