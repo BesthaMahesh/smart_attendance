@@ -20,10 +20,13 @@ app.add_middleware(
 try:
     if not hasattr(cv2, 'data') or not hasattr(cv2, 'CascadeClassifier'):
         import sys
-        print("DEBUG DIAGNOSTICS FOR CV2:", flush=True)
-        print(f"DEBUG: cv2 path = {getattr(cv2, '__file__', 'None')}", flush=True)
-        print(f"DEBUG: cv2 dir contents = {dir(cv2)}", flush=True)
-        print(f"DEBUG: sys.path = {sys.path}", flush=True)
+        diag_msg = (
+            f"cv2 is missing critical attributes!\n"
+            f"  DEBUG: cv2 path = {getattr(cv2, '__file__', 'None')}\n"
+            f"  DEBUG: cv2 dir contents = {dir(cv2)}\n"
+            f"  DEBUG: sys.path = {sys.path}"
+        )
+        raise RuntimeError(diag_msg)
     
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 except Exception as e:
