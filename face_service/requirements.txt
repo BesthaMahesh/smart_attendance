@@ -3,7 +3,5 @@ uvicorn
 numpy
 python-multipart
 opencv-python-headless
-face-recognition-models
---find-links https://github.com/z-a-f/dlib-wheels/releases/download/v19.24.2/
-dlib
+dlib-bin
 face-recognition
