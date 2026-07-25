@@ -20,11 +20,12 @@ app.add_middleware(
 try:
     if not hasattr(cv2, 'data') or not hasattr(cv2, 'CascadeClassifier'):
         import sys
+        version_str = getattr(cv2, '__version__', 'UNKNOWN')
         diag_msg = (
             f"cv2 is missing critical attributes!\n"
-            f"  DEBUG: cv2 path = {getattr(cv2, '__file__', 'None')}\n"
-            f"  DEBUG: cv2 dir contents = {dir(cv2)}\n"
-            f"  DEBUG: sys.path = {sys.path}"
+            f"  OpenCV Version: {version_str}\n"
+            f"  cv2 path = {getattr(cv2, '__file__', 'None')}\n"
+            f"  sys.path = {sys.path}"
         )
         raise RuntimeError(diag_msg)
     
